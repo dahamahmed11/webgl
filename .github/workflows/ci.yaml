@@ -1,0 +1,59 @@
+name: Webgl
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  AZURE_STORAGE_ACCOUNT: ${{ vars.AZURE_STORAGE_ACCOUNT }}
+  CONTAINER_NAME: ${{ vars.AZURE_STORAGE_CONTAINER_NAME }}
+  AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
+  DOCKER_IMAGE_NAME: 'webgl-app'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image
+      run: |
+        docker build -t $DOCKER_IMAGE_NAME:${{ github.sha }} .
+        docker build -t $DOCKER_IMAGE_NAME:latest .
+
+    - name: Save Docker image as artifact
+      run: |
+        docker save $DOCKER_IMAGE_NAME:${{ github.sha }} -o webgl-app.tar
+        
+        echo "Docker Image: $DOCKER_IMAGE_NAME:${{ github.sha }}" > build-info.txt
+        echo "Build Date: $(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> build-info.txt
+        echo "Git Commit: ${{ github.sha }}" >> build-info.txt
+        echo "Git Branch: ${{ github.ref_name }}" >> build-info.txt
+        echo "Workflow: ${{ github.workflow }}" >> build-info.txt
+
+    - name: Compress artifact
+      run: |
+        TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+        
+        tar -czf webgl-docker-$TIMESTAMP.tar.gz webgl-app.tar build-info.txt
+        
+        ls -la *.tar*
+
+    - name: Upload Docker artifact to Azure Storage
+      uses: azure/CLI@v2
+      with:
+        inlineScript: |
+          az storage blob upload \
+            --account-name $AZURE_STORAGE_ACCOUNT \
+            --account-key $AZURE_STORAGE_ACCOUNT_KEY \
+            --container-name $CONTAINER_NAME \
+            --name "webgl-docker-$(date +%Y%m%d-%H%M%S).tar.gz" \
+            --file webgl-docker-*.tar.gz \
+            --overwrite
