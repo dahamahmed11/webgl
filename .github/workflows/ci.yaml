@@ -11,7 +11,7 @@ env:
   CONTAINER_NAME: ${{ vars.AZURE_STORAGE_CONTAINER_NAME }}
   AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
   UNITY_VERSION: '2021.3.34f1'
-  UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+  # UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
 
 jobs:
   build-and-deploy:
@@ -25,7 +25,7 @@ jobs:
         fetch-depth: 0
 
     - name: Cache Unity Library
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: Library
         key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
@@ -33,12 +33,12 @@ jobs:
           Library-
 
     - name: Setup Unity
-      uses: game-ci/unity-setup@v3
+      uses: game-ci/unity-setup@v4
       with:
         unity-version: ${{ env.UNITY_VERSION }}
 
     - name: Build Unity WebGL
-      uses: game-ci/unity-builder@v3
+      uses: game-ci/unity-builder@v4
       with:
         unity-version: ${{ env.UNITY_VERSION }}
         target-platform: WebGL
@@ -127,7 +127,7 @@ jobs:
         cat $DEPLOYMENT_INFO
 
     - name: Upload build artifact to workflow
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: webgl-build
         path: intellifish-webgl-*.tar.gz
@@ -139,7 +139,7 @@ jobs:
 
     steps:
     - name: Download build artifact
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: webgl-build
 
